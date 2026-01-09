@@ -5,6 +5,9 @@ import write_config from "./src/util/config/write_config";
 import smart_backup from "./src/util/config/persistence/smart_backup";
 import smart_restore from "./src/util/config/persistence/smart_restore";
 import backup_to_partition from "./src/util/config/persistence/smart_backup";
+import { createTaskLogger } from './src/util/logging';
+
+const mainLog = createTaskLogger('main');
 import { logo, headless_logo, write_logo } from "./src/logo";
 
 import { parseArgs } from 'node:util';
@@ -52,19 +55,19 @@ Examples:
 
 if (values.qwrite) {
     console.log(write_logo);
-    colors.green('[✓] [winstro::main]: Write mode detected, prompting user to generate config file');
+  mainLog.log('Write mode detected, prompting user to generate config file', 'green');
     write_config();
 } else if (values.backup) {
     console.log(write_logo);
-    colors.green('[✓] [winstro::main]: Backup/restore mode detected, checking for backup partition and backing up');
+  mainLog.log('Backup mode detected, triggering smart_backup', 'green');
     smart_backup();
 } else if (values.restore) {
     console.log(write_logo);
-    colors.green(`[✓] [winstro::main]: Restore mode detected, attempting restoration from the `);
+  mainLog.log('Restore mode detected, triggering smart_restore', 'green');
     smart_restore();
 } else if (values.headless) {
     console.log(headless_logo);
-    colors.green('[✓] [winstro::main]: headless mode detected, installing without prompts');
+  mainLog.log('Headless mode detected, triggering install_package', 'green');
     install_package();
 } else {
     main();
@@ -74,10 +77,10 @@ if (values.qwrite) {
 async function main() {
     console.log(logo);
     if (await isAdmin()) {
-        colors.green("[✗] [winstro::main]: process already started as admin, skipping elevation warning")
+        mainLog.log("[✓] [winstro::main]: process already started as admin, skipping elevation warning", 'green')
         cli();
     } else {
-        colors.yellow("[⚠] [winstro::main]:  process not running as admin, you might want to consider running it as admin to prevent issues with powershell signing.")
+        mainLog.log("[⚠] [winstro::main]:  process not running as admin, you might want to consider running it as admin to prevent issues with powershell signing.", 'yellow');
         cli();
     }
 }

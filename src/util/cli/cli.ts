@@ -2,6 +2,9 @@ import inquirer from 'inquirer';
 import colors from '../colors.ts';
 import install_package from '../install/install_package.ts';
 import write_config from '../config/write_config.ts';
+import { createTaskLogger } from '../logging';
+
+const cliLog = createTaskLogger('cli');
 
 async function cli() {
     const answers = await inquirer.prompt([
@@ -15,18 +18,18 @@ async function cli() {
 
     switch (answers.action) {
         case 'install':
-            colors.green('[✓] reading current config && installing');
+            cliLog.log('[✓] reading current config && installing', 'green');
             install_package();
             break;
         case 'write':
-            colors.green('[✓] going to write mode!!');
+            cliLog.log('[✓] going to write mode!!', 'green');
             write_config();
             break;
         case 'exit':
-            colors.red('[✗] exiting...');
+            cliLog.log('[✗] exiting...', 'red');
             return;
         default:
-            colors.red('[✗] invalid choice');
+            cliLog.log('[✗] invalid choice', 'red');
     }
 }
 

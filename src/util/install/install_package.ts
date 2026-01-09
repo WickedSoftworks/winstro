@@ -1,24 +1,22 @@
-import { exec } from 'child_process';
-import colors from '../colors';
 import winget_requirements from '../../../config/requirements.winget';
+import { createTaskLogger } from '../logging';
+import { run as runProcess } from '../run';
+
+const ipLog = createTaskLogger('install_package');
 
 async function install_package() {
     for (const requirement of winget_requirements) {
-        const command: string = `winget install ${requirement} --silent --accept-package-agreements --accept-source-agreements`;
+        const args = ['install', requirement, '--silent', '--accept-package-agreements', '--accept-source-agreements'];
+        ipLog.log(`Starting install for ${requirement} with args: ${args.join(' ')}`, 'green');
         try {
-            await new Promise<void>((resolve, reject) => {
-                exec(`${command} > install.log`, { encoding: 'utf-8' }, (error) => {
-                    if (error) {
-                        colors.red(`[winstro::install_package]: error installing package: ${error}`);
-                        colors.red(`[winstro::install_package]: see install.log for more details`);
-                        reject(error);
-                    } else {
-                        resolve();
-                    }
-                });
-            });
+            const res = await runProcess('install_package', 'winget', args);
+            if (res.code !== 0) {
+                ipLog.log(`[✗] [winstro::install_package]: error installing package ${requirement}, exit ${res.code}`, 'red');
+                throw new Error(`Exit code ${res.code}`);
+            }
+            ipLog.log(`Finished ${requirement} successfully (exit ${res.code})`, 'green');
         } catch (error) {
-            // Error already logged above, continue to next package
+            // already logged; continue with next package
         }
     }
 }

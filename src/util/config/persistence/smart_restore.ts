@@ -1,54 +1,59 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
-import { execSync } from 'child_process';
+import { /* execSync */ } from 'child_process';
 import colors from '../../colors';
+import { createTaskLogger } from '../../logging';
+import { run as runProcess } from '../../run';
+
+const srLog = createTaskLogger('smart_restore');
 
 async function smart_restore(): Promise<void> {
     try {
-        colors.green('[✓] [winstro::smart_restore]: Checking for winstro backup partition...');
+        srLog.log('[✓] [winstro::smart_restore]: Checking for winstro backup partition...', 'green');
         
         // Find partition by volume label instead of drive letter
         const backupDrive = await findBackupPartition();
         
         if (backupDrive) {
-            colors.green(`[✓] [winstro::smart_restore]: Found backup partition at ${backupDrive}`);
+            srLog.log(`[✓] [winstro::smart_restore]: Found backup partition at ${backupDrive}`, 'green');
             
             // List backup files on backup drive
             try {
                 const backupFiles = fs.readdirSync(backupDrive).filter(file => file.endsWith('.tar.gz'));
                 
                 if (backupFiles.length > 0) {
-                    colors.green(`[✓] [winstro::smart_restore]: Found ${backupFiles.length} backup file(s)`);
+                    srLog.log(`[✓] [winstro::smart_restore]: Found ${backupFiles.length} backup file(s)`, 'green');
                     
                     // Use the most recent backup (sort by name/timestamp)
                     const latestBackup = backupFiles.sort().reverse()[0];
                     const backupPath = path.join(backupDrive, latestBackup);
                     
-                    colors.green(`[✓] [winstro::smart_restore]: Using backup: ${latestBackup}`);
+                    srLog.log(`[✓] [winstro::smart_restore]: Using backup: ${latestBackup}`, 'green');
                     await restore_configs(backupPath);
                     return;
                 } else {
-                    colors.yellow('[⚠] [winstro::smart_restore]: No backup files found on partition');
+                    srLog.log('[⚠] [winstro::smart_restore]: No backup files found on partition', 'yellow');
                 }
             } catch (err) {
-                colors.yellow(`[⚠] [winstro::smart_restore]: Error reading backup partition: ${err}`);
+                srLog.log(`[⚠] [winstro::smart_restore]: Error reading backup partition: ${err}`, 'yellow');
             }
         } else {
-            colors.yellow('[⚠] [winstro::smart_restore]: Backup partition "winstro-backup" not found');
+            srLog.log('[⚠] [winstro::smart_restore]: Backup partition "winstro-backup" not found', 'yellow');
         }
         
         // Fallback: Ask user for path
-        colors.green('[✓] [winstro::smart_restore]: Prompting for backup path...');
+        srLog.log('[✓] [winstro::smart_restore]: Prompting for backup path...', 'green');
         const backupPath = await promptForPath();
         
         if (backupPath) {
             await restore_configs(backupPath);
+            srLog.log(`[✓] [winstro::smart_restore]: restore_configs called with ${backupPath}`, 'green');
         } else {
             colors.yellow('[✗] [winstro::smart_restore]: No backup path provided, aborting restore');
         }
     } catch (err) {
-        colors.yellow(`[✗] [winstro::smart_restore]: Smart restore failed: ${err}`);
+        srLog.log(`[✗] [winstro::smart_restore]: Smart restore failed: ${err}`, 'red');
         throw err;
     }
 }
@@ -61,18 +66,16 @@ async function findBackupPartition(): Promise<string | null> {
             ForEach-Object { $_.DriveLetter + ':' }
         `;
         
-        const result = execSync(`powershell -Command "${psCommand.replace(/"/g, '\\"')}"`, { 
-            encoding: 'utf-8',
-            stdio: ['pipe', 'pipe', 'pipe']
-        }).trim();
-        
+        const res = await runProcess('smart_restore', 'powershell', ['-Command', psCommand]);
+        const result = (res.stdout || '').trim();
+
         if (result && result.length === 2) {
             return result;
         }
-        
+
         return null;
     } catch (err) {
-        colors.yellow(`[⚠] [winstro::smart_restore]: Error finding backup partition: ${err}`);
+        srLog.log(`[⚠] [winstro::smart_restore]: Error finding backup partition: ${err}`, 'yellow');
         return null;
     }
 }
@@ -91,7 +94,7 @@ async function promptForPath(): Promise<string | null> {
             if (trimmed && fs.existsSync(trimmed)) {
                 resolve(trimmed);
             } else if (trimmed) {
-                colors.yellow(`[⚠] [winstro::smart_restore]: File not found: ${trimmed}`);
+                srLog.log(`[⚠] [winstro::smart_restore]: File not found: ${trimmed}`, 'yellow');
                 resolve(null);
             } else {
                 resolve(null);
@@ -103,11 +106,11 @@ async function promptForPath(): Promise<string | null> {
 async function restore_configs(backupFilePath: string): Promise<void> {
     try {
         if (!fs.existsSync(backupFilePath)) {
-            colors.yellow(`[✗] [winstro::restore_configs]: Backup file not found: ${backupFilePath}`);
+            srLog.log(`[✗] [winstro::restore_configs]: Backup file not found: ${backupFilePath}`, 'red');
             throw new Error(`Backup file not found: ${backupFilePath}`);
         }
         
-        colors.green('[✓] [winstro::restore_configs]: Starting configuration restore...');
+        srLog.log('[✓] [winstro::restore_configs]: Starting configuration restore...', 'green');
         
         // Create temporary extraction directory
         const tempDir = path.join(process.env.TEMP || process.env.TMP || '', 'winstro-restore');
@@ -117,13 +120,13 @@ async function restore_configs(backupFilePath: string): Promise<void> {
         fs.mkdirSync(tempDir, { recursive: true });
         
         // Extract backup
-        colors.green('[✓] [winstro::restore_configs]: Extracting backup...');
+        srLog.log('[✓] [winstro::restore_configs]: Extracting backup...', 'green');
         await decompressFile(backupFilePath, tempDir);
         
         // Read metadata
         const metadataPath = path.join(tempDir, '_backup_metadata.json');
         if (!fs.existsSync(metadataPath)) {
-            colors.yellow('[⚠] [winstro::restore_configs]: Warning: Backup metadata not found');
+            srLog.log('[⚠] [winstro::restore_configs]: Warning: Backup metadata not found', 'yellow');
         }
         
         const metadata = fs.existsSync(metadataPath) 
@@ -131,7 +134,7 @@ async function restore_configs(backupFilePath: string): Promise<void> {
             : null;
         
         // Restore configuration directories
-        colors.green('[✓] [winstro::restore_configs]: Restoring configuration directories...');
+        srLog.log('[✓] [winstro::restore_configs]: Restoring configuration directories...', 'green');
         let restoredCount = 0;
         
         const files = fs.readdirSync(tempDir);
@@ -157,15 +160,15 @@ async function restore_configs(backupFilePath: string): Promise<void> {
                     if (fs.existsSync(expandedPath)) {
                         const backupSuffix = `.backup-${new Date().getTime()}`;
                         fs.renameSync(expandedPath, expandedPath + backupSuffix);
-                        colors.yellow(`[⚠] [winstro::restore_configs]: Backed up existing config: ${originalPath}${backupSuffix}`);
+                        srLog.log(`[⚠] [winstro::restore_configs]: Backed up existing config: ${originalPath}${backupSuffix}`, 'yellow');
                     }
                     
                     // Restore config
                     copyDirSync(sourcePath, expandedPath);
                     restoredCount++;
-                    colors.green(`[✓] [winstro::restore_configs]: Restored ${originalPath}`);
+                    srLog.log(`[✓] [winstro::restore_configs]: Restored ${originalPath}`, 'green');
                 } catch (err) {
-                    colors.yellow(`[⚠] [winstro::restore_configs]: Failed to restore ${originalPath}: ${err}`);
+                    srLog.log(`[⚠] [winstro::restore_configs]: Failed to restore ${originalPath}: ${err}`, 'yellow');
                 }
             }
         }
@@ -173,12 +176,12 @@ async function restore_configs(backupFilePath: string): Promise<void> {
         // Clean up temp directory
         fs.rmSync(tempDir, { recursive: true, force: true });
         
-        colors.green(`[✓] [winstro::restore_configs]: Restore complete! Restored ${restoredCount} configuration directories`);
+        srLog.log(`[✓] [winstro::restore_configs]: Restore complete! Restored ${restoredCount} configuration directories`, 'green');
         if (metadata) {
-            colors.green(`[i] [winstro::restore_configs]: Backup was created on: ${metadata.timestamp}`);
+            srLog.log(`[i] [winstro::restore_configs]: Backup was created on: ${metadata.timestamp}`, 'blue');
         }
     } catch (err) {
-        colors.yellow(`[✗] [winstro::restore_configs]: Restore failed: ${err}`);
+        srLog.log(`[✗] [winstro::restore_configs]: Restore failed: ${err}`, 'red');
         throw err;
     }
 }

@@ -2,10 +2,11 @@ import colors from '../colors'
 import * as readline from 'readline';
 import * as fs from 'fs';
 import * as path from 'path';
+import { createTaskLogger } from '../logging';
+
+const wcLog = createTaskLogger('write_config');
 
 function write_config() {
-    // Prompts the user for package names, generates a config file, and writes it to requirements.winget.ts in the config folder.
-
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -20,6 +21,7 @@ function write_config() {
         }
         fs.writeFileSync(path.join(configDir, 'requirements.winget.ts'), configContent, 'utf8');
         console.log(colors.green('[winstro::write_config]: requirements.winget.ts has been created successfully.'));
+        wcLog.log(`Created requirements.winget.ts with ${packages.length} packages`, 'green');
         rl.close();
     });
 

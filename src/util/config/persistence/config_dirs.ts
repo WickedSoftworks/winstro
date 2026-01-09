@@ -34,6 +34,33 @@ const commonAppConfigDirs: string[] = [
     // Other Popular Apps
     '%USERPROFILE%\\AppData\\Local\\Telegram Desktop', // Telegram
     '%USERPROFILE%\\AppData\\Local\\Everything', // Everything Search
+    
+    // Terminals & Shells
+    '%LOCALAPPDATA%\\Packages\\Microsoft.WindowsTerminal_8wekyb3d8bbwe', // Windows Terminal (settings)
+    '%USERPROFILE%\\Documents\\PowerShell', // PowerShell profile and modules
+
+    // JetBrains IDEs
+    '%APPDATA%\\JetBrains', // JetBrains IDE settings (IntelliJ, PyCharm, etc.)
+
+    // Node & development runtimes
+    '%USERPROFILE%\\.npm', // npm cache and config
+    '%USERPROFILE%\\.nvm', // NVM for Windows
+
+    // Editors
+    '%USERPROFILE%\\.vscode-insiders', // VS Code Insiders
+    '%USERPROFILE%\\.config\\nvim', // Neovim config
+
+    // Package managers
+    '%ProgramData%\\chocolatey', // Chocolatey
+    '%USERPROFILE%\\scoop', // Scoop
+
+    // Communication / Collaboration
+    '%APPDATA%\\Slack', // Slack
+    '%APPDATA%\\Microsoft\\Teams', // Microsoft Teams
+
+    // Security / Keys
+    '%USERPROFILE%\\.gnupg', // GnuPG keys and configs
+    '%APPDATA%\\KeePass', // KeePass
 ];
 
 export default commonAppConfigDirs;
