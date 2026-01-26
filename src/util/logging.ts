@@ -20,7 +20,7 @@ export function createTaskLogger(taskName: string) {
     const filePath = path.join(LOGS_DIR, `${taskName}.log`);
 
     function write(line: string, color?: string) {
-        const formatted = `[${timestamp()}] [${taskName}] ${line.replace(/\r?\n$/,'')}\n`;
+        const formatted = `[${timestamp()}] ${line.replace(/\r?\n$/,'')}\n`;
         try {
             fs.appendFileSync(filePath, formatted, { encoding: 'utf8' });
             // Also log in the console to prevent repeating logging everywhere

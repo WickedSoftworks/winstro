@@ -18,16 +18,19 @@ async function smart_restore(): Promise<void> {
         if (backupDrive) {
             srLog.log(`[✓] [winstro::smart_restore]: Found backup partition at ${backupDrive}`, 'green');
             
+            // Ensure drive path has backslash
+            const drivePath = backupDrive.endsWith('\\') ? backupDrive : backupDrive + '\\';
+            
             // List backup files on backup drive
             try {
-                const backupFiles = fs.readdirSync(backupDrive).filter(file => file.endsWith('.tar.gz'));
+                const backupFiles = fs.readdirSync(drivePath).filter(file => file.endsWith('.tar.gz'));
                 
                 if (backupFiles.length > 0) {
                     srLog.log(`[✓] [winstro::smart_restore]: Found ${backupFiles.length} backup file(s)`, 'green');
                     
                     // Use the most recent backup (sort by name/timestamp)
                     const latestBackup = backupFiles.sort().reverse()[0];
-                    const backupPath = path.join(backupDrive, latestBackup);
+                    const backupPath = path.join(drivePath, latestBackup);
                     
                     srLog.log(`[✓] [winstro::smart_restore]: Using backup: ${latestBackup}`, 'green');
                     await restore_configs(backupPath);
@@ -40,6 +43,34 @@ async function smart_restore(): Promise<void> {
             }
         } else {
             srLog.log('[⚠] [winstro::smart_restore]: Backup partition "winstro-backup" not found', 'yellow');
+        }
+        
+        // Check default backup directory
+        srLog.log('[✓] [winstro::smart_restore]: Checking default backup directory...', 'green');
+        const defaultBackupDir = path.join(process.env.LOCALAPPDATA || '', 'winstro', 'backups');
+        
+        if (fs.existsSync(defaultBackupDir)) {
+            try {
+                const backupFiles = fs.readdirSync(defaultBackupDir).filter(file => file.endsWith('.tar.gz'));
+                
+                if (backupFiles.length > 0) {
+                    srLog.log(`[✓] [winstro::smart_restore]: Found ${backupFiles.length} backup file(s) in default directory`, 'green');
+                    
+                    // Use the most recent backup (sort by name/timestamp)
+                    const latestBackup = backupFiles.sort().reverse()[0];
+                    const backupPath = path.join(defaultBackupDir, latestBackup);
+                    
+                    srLog.log(`[✓] [winstro::smart_restore]: Using backup: ${latestBackup}`, 'green');
+                    await restore_configs(backupPath);
+                    return;
+                } else {
+                    srLog.log('[⚠] [winstro::smart_restore]: No backup files found in default directory', 'yellow');
+                }
+            } catch (err) {
+                srLog.log(`[⚠] [winstro::smart_restore]: Error reading default backup directory: ${err}`, 'yellow');
+            }
+        } else {
+            srLog.log('[⚠] [winstro::smart_restore]: Default backup directory does not exist', 'yellow');
         }
         
         // Fallback: Ask user for path
@@ -61,16 +92,21 @@ async function smart_restore(): Promise<void> {
 async function findBackupPartition(): Promise<string | null> {
     try {
         const psCommand = `
-            Get-Volume | Where-Object { $_.FileSystemLabel -eq 'winstro-backup' } | 
-            Select-Object -First 1 | 
-            ForEach-Object { $_.DriveLetter + ':' }
-        `;
+            $volume = Get-Volume | Where-Object { $_.FileSystemLabel -eq 'winstro-backup' } | Select-Object -First 1
+            if ($volume -and $volume.DriveLetter) {
+                Write-Output ($volume.DriveLetter + ':')
+            }
+        `.trim();
         
-        const res = await runProcess('smart_restore', 'powershell', ['-Command', psCommand]);
-        const result = (res.stdout || '').trim();
-
-        if (result && result.length === 2) {
-            return result;
+        const encodedCommand = Buffer.from(psCommand, 'utf16le').toString('base64');
+        const res = await runProcess('smart_restore', 'powershell.exe', ['-NoProfile', '-EncodedCommand', encodedCommand]);
+        
+        // Filter out CLIXML and get the drive letter
+        const lines = (res.stdout || '').split('\n');
+        const driveLine = lines.find(line => line.trim().match(/^[A-Z]:$/));
+        
+        if (driveLine) {
+            return driveLine.trim();
         }
 
         return null;
@@ -113,7 +149,7 @@ async function restore_configs(backupFilePath: string): Promise<void> {
         srLog.log('[✓] [winstro::restore_configs]: Starting configuration restore...', 'green');
         
         // Create temporary extraction directory
-        const tempDir = path.join(process.env.TEMP || process.env.TMP || '', 'winstro-restore');
+        const tempDir = path.join(process.env.LOCALAPPDATA || '', 'winstro', 'temp', 'restore');
         if (fs.existsSync(tempDir)) {
             fs.rmSync(tempDir, { recursive: true, force: true });
         }
@@ -123,10 +159,18 @@ async function restore_configs(backupFilePath: string): Promise<void> {
         srLog.log('[✓] [winstro::restore_configs]: Extracting backup...', 'green');
         await decompressFile(backupFilePath, tempDir);
         
+        // Check if extraction created subdirectories we need to navigate
+        const extractedContents = fs.readdirSync(tempDir);
+        const files = extractedContents.filter(f => fs.statSync(path.join(tempDir, f)).isFile());
+        const dirs = extractedContents.filter(f => fs.statSync(path.join(tempDir, f)).isDirectory());
+        srLog.log(`[i] [winstro::restore_configs]: Extracted files: ${files.join(', ')}`, 'blue');
+        srLog.log(`[i] [winstro::restore_configs]: Extracted directories: ${dirs.join(', ')}`, 'blue');
+        
         // Read metadata
         const metadataPath = path.join(tempDir, '_backup_metadata.json');
         if (!fs.existsSync(metadataPath)) {
             srLog.log('[⚠] [winstro::restore_configs]: Warning: Backup metadata not found', 'yellow');
+            srLog.log(`[i] [winstro::restore_configs]: Looking in: ${metadataPath}`, 'blue');
         }
         
         const metadata = fs.existsSync(metadataPath) 
@@ -137,8 +181,8 @@ async function restore_configs(backupFilePath: string): Promise<void> {
         srLog.log('[✓] [winstro::restore_configs]: Restoring configuration directories...', 'green');
         let restoredCount = 0;
         
-        const files = fs.readdirSync(tempDir);
-        for (const file of files) {
+        const itemsToRestore = fs.readdirSync(tempDir);
+        for (const file of itemsToRestore) {
             if (file === '_backup_metadata.json') continue;
             
             const sourcePath = path.join(tempDir, file);
@@ -212,8 +256,20 @@ function copyDirSync(src: string, dest: string): void {
 }
 
 async function decompressFile(sourceFile: string, outputDir: string): Promise<void> {
-    const tar = require('tar');
-    await tar.x({ file: sourceFile, cwd: outputDir, strip: 1 });
+    // Use system tar command for extraction (more reliable than tar package)
+    const psCommand = `
+        tar -xzf "${sourceFile}" -C "${outputDir}"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Tar extraction failed with code $LASTEXITCODE"
+        }
+    `.trim();
+    
+    const encodedCommand = Buffer.from(psCommand, 'utf16le').toString('base64');
+    const res = await runProcess('smart_restore', 'powershell.exe', ['-NoProfile', '-EncodedCommand', encodedCommand]);
+    
+    if (res.code !== 0) {
+        throw new Error(`Extraction failed with code ${res.code}`);
+    }
 }
 
 
