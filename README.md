@@ -3,7 +3,7 @@
 winstro
 </h1>
 
-Windows as a distro. Currently only supports package download lists!
+Windows as a distro. Fully supports local config backups and package installation!
 </div>
 
 > [!WARNING] 
@@ -64,3 +64,4 @@ Made with ❤️ by Dylan.
 
 *this is subject to change!*
 </div>
+
