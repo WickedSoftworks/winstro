@@ -34,6 +34,11 @@ async function smart_restore(): Promise<void> {
                     
                     srLog.log(`[✓] [winstro::smart_restore]: Using backup: ${latestBackup}`, 'green');
                     await restore_configs(backupPath);
+                    
+                    // Restoration successful - remove partition and expand drive
+                    srLog.log('[✓] [winstro::smart_restore]: Restoration complete, cleaning up backup partition...', 'green');
+                    await removeBackupPartitionAndExpand(backupDrive);
+                    
                     return;
                 } else {
                     srLog.log('[⚠] [winstro::smart_restore]: No backup files found on partition', 'yellow');
@@ -228,6 +233,8 @@ async function restore_configs(backupFilePath: string): Promise<void> {
         srLog.log(`[✗] [winstro::restore_configs]: Restore failed: ${err}`, 'red');
         throw err;
     }
+
+    
 }
 
 function expandEnvVars(str: string): string {
@@ -269,6 +276,71 @@ async function decompressFile(sourceFile: string, outputDir: string): Promise<vo
     
     if (res.code !== 0) {
         throw new Error(`Extraction failed with code ${res.code}`);
+    }
+}
+
+async function removeBackupPartitionAndExpand(driveLetter: string): Promise<void> {
+    try {
+        srLog.log('[✓] [winstro::cleanup]: Removing backup partition and expanding main drive...', 'green');
+        
+        // Get the disk number and partition number for the backup drive
+        const psGetPartitionInfo = `
+            $volume = Get-Volume -DriveLetter '${driveLetter.replace(':', '')}'
+            $partition = Get-Partition | Where-Object { $_.DriveLetter -eq '${driveLetter.replace(':', '')}' }
+            if ($partition) {
+                Write-Output "DISK:$($partition.DiskNumber):PARTITION:$($partition.PartitionNumber)"
+            }
+        `.trim();
+        
+        const encodedGetInfo = Buffer.from(psGetPartitionInfo, 'utf16le').toString('base64');
+        const infoRes = await runProcess('smart_restore', 'powershell.exe', ['-NoProfile', '-EncodedCommand', encodedGetInfo]);
+        
+        const infoMatch = (infoRes.stdout || '').match(/DISK:(\d+):PARTITION:(\d+)/);
+        if (!infoMatch) {
+            srLog.log('[⚠] [winstro::cleanup]: Could not determine partition info, skipping cleanup', 'yellow');
+            return;
+        }
+        
+        const diskNumber = infoMatch[1];
+        const partitionNumber = infoMatch[2];
+        
+        srLog.log(`[i] [winstro::cleanup]: Found backup partition: Disk ${diskNumber}, Partition ${partitionNumber}`, 'blue');
+        
+        // Delete the partition and extend the main partition
+        const psCleanup = `
+            # Remove the backup partition
+            Remove-Partition -DiskNumber ${diskNumber} -PartitionNumber ${partitionNumber} -Confirm:$false
+            
+            # Find the main partition (usually the largest remaining partition on the same disk)
+            $mainPartition = Get-Partition -DiskNumber ${diskNumber} | 
+                Where-Object { $_.Type -eq 'Basic' } | 
+                Sort-Object Size -Descending | 
+                Select-Object -First 1
+            
+            if ($mainPartition) {
+                # Get maximum size for the partition
+                $maxSize = (Get-PartitionSupportedSize -DiskNumber ${diskNumber} -PartitionNumber $mainPartition.PartitionNumber).SizeMax
+                
+                # Resize partition to maximum available size
+                Resize-Partition -DiskNumber ${diskNumber} -PartitionNumber $mainPartition.PartitionNumber -Size $maxSize
+                
+                Write-Output "SUCCESS: Partition removed and drive expanded"
+            } else {
+                throw "Could not find main partition to expand"
+            }
+        `.trim();
+        
+        const encodedCleanup = Buffer.from(psCleanup, 'utf16le').toString('base64');
+        const cleanupRes = await runProcess('smart_restore', 'powershell.exe', ['-NoProfile', '-EncodedCommand', encodedCleanup]);
+        
+        if (cleanupRes.code === 0 && (cleanupRes.stdout || '').includes('SUCCESS')) {
+            srLog.log('[✓] [winstro::cleanup]: Backup partition removed and main drive expanded successfully!', 'green');
+        } else {
+            srLog.log('[⚠] [winstro::cleanup]: Partition cleanup completed with warnings', 'yellow');
+        }
+    } catch (err) {
+        srLog.log(`[⚠] [winstro::cleanup]: Failed to remove partition and expand drive: ${err}`, 'yellow');
+        srLog.log('[i] [winstro::cleanup]: You may need to manually remove the backup partition using Disk Management', 'blue');
     }
 }
 

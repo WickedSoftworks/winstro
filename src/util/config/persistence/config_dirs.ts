@@ -2,7 +2,6 @@
 // These are apps that users typically have and would find annoying to reconfigure
 const commonAppConfigDirs: string[] = [
     // Development Tools
-    '%USERPROFILE%\\.vscode',           // Visual Studio Code
     '%USERPROFILE%\\.ssh',              // SSH keys
     '%USERPROFILE%\\.git',              // Git configuration
     '%USERPROFILE%\\.docker',           // Docker configuration
@@ -14,6 +13,9 @@ const commonAppConfigDirs: string[] = [
     '%USERPROFILE%\\AppData\\Local\\Google\\Chrome',  // Google Chrome
     '%APPDATA%\\Mozilla\\Firefox', // Mozilla Firefox
     '%USERPROFILE%\\AppData\\Local\\Microsoft\\Edge', // Microsoft Edge
+    '%USERPROFILE%\\AppData\\Local\\BraveSoftware\\Brave-Browser', // Brave Browser
+    '%APPDATA%\\zen', // Zen Browser
+    '%USERPROFILE%\\AppData\\Local\\Arc', // Arc Browser
 
     // Communication
     '%USERPROFILE%\\AppData\\Local\\Discord', // Discord
@@ -47,6 +49,7 @@ const commonAppConfigDirs: string[] = [
     '%USERPROFILE%\\.nvm', // NVM for Windows
 
     // Editors
+    '%USERPROFILE%\\.vscode',           // Visual Studio Code
     '%USERPROFILE%\\.vscode-insiders', // VS Code Insiders
     '%USERPROFILE%\\.config\\nvim', // Neovim config
 
@@ -61,6 +64,9 @@ const commonAppConfigDirs: string[] = [
     // Security / Keys
     '%USERPROFILE%\\.gnupg', // GnuPG keys and configs
     '%APPDATA%\\KeePass', // KeePass
+
+    // VPN
+    '%USERPROFILE%\\AppData\\Local\\Surfshark', // Surfshark VPN
 ];
 
 export default commonAppConfigDirs;
