@@ -1,9 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { spawn } from 'child_process';
 import colors from './colors';
 
-const ROOT_DIR = process.cwd();
+const ROOT_DIR = path.join(__dirname, '..', '..');
 const LOGS_DIR = path.join(ROOT_DIR, 'logs');
 
 if (!fs.existsSync(LOGS_DIR)) {
