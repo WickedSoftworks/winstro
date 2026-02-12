@@ -11,10 +11,19 @@ if (!fs.existsSync(LOGS_DIR)) {
     } catch (err) {}
 }
 
+/**
+ * Gets the current timestamp in ISO format for logging purposes
+ * @returns An ISO Date string
+ */
 function timestamp(): string {
     return new Date().toISOString();
 }
 
+/**
+ * Creates a logger for a specific task that writes logs to a file and optionally colors them in the console
+ * @param taskName The name of the task for which to create the logger (used for naming the log file)
+ * @returns An object with a log function and the log file path
+ */
 export function createTaskLogger(taskName: string) {
     const filePath = path.join(LOGS_DIR, `${taskName}.log`);
 
@@ -38,6 +47,11 @@ export function createTaskLogger(taskName: string) {
     };
 }
 
+/**
+ * Logs a message immediately for a specific task
+ * @param taskName The name of the task for which to log the message
+ * @param message The message to log
+ */
 export function logNow(taskName: string, message: string) {
     const logger = createTaskLogger(taskName);
     logger.log(message);

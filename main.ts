@@ -71,7 +71,9 @@ if (values.qwrite) {
     main();
 }
 
-
+/**
+ * Main entry point for the application
+ */
 async function main() {
     console.log(logo);
     if (await isAdmin()) {

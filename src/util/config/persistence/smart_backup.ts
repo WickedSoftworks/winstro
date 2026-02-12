@@ -14,8 +14,15 @@ interface DiskInfo {
     friendlyName: string;
 }
 
+interface RecentBackup {
+    path: string;
+    timestamp: Date;
+    ageHours: number;
+}
+
 /**
- * Check if the current process is running with administrator privileges
+ * Checks if the current process is running with administrator privileges
+ * @returns Either true / false 
  */
 async function isAdmin(): Promise<boolean> {
     try {
@@ -37,12 +44,6 @@ async function isAdmin(): Promise<boolean> {
         sbLog.log(`[⚠] [winstro::smart_backup]: Error checking admin status: ${err}`, 'yellow');
         return false;
     }
-}
-
-interface RecentBackup {
-    path: string;
-    timestamp: Date;
-    ageHours: number;
 }
 
 /**
@@ -104,6 +105,10 @@ function findRecentBackup(backupDir: string, maxAgeHours: number = 12): RecentBa
     }
 }
 
+/**
+ * Create a smart backup of the users configurations & packages
+ * @param backupFilePath Optional backup path if not default
+ */
 async function smart_backup(backupFilePath?: string): Promise<void> {
     try {
         sbLog.log(`[✓] [winstro::smart_backup]: Starting backup process...`, 'green');
@@ -209,6 +214,10 @@ async function smart_backup(backupFilePath?: string): Promise<void> {
     }
 }
 
+/**
+ * Find / identifies the main disk of the OS
+ * @returns Information to identify the main disk
+ */
 async function findMainDisk(): Promise<DiskInfo> {
     try {
         const psCommand = `
@@ -262,6 +271,10 @@ async function findMainDisk(): Promise<DiskInfo> {
     }
 }
 
+/**
+ * Find the next avalible drive letter for the program to use (preferrably W)
+ * @returns The next availible drive letter
+ */
 async function findAvailableDriveLetter(): Promise<string> {
     try {
         // Start with W: as preferred, then try others
@@ -306,6 +319,11 @@ async function findAvailableDriveLetter(): Promise<string> {
     }
 }
 
+/**
+ * Shrinks the selected / default partition to the required backup amount
+ * @param driveLetter Drive letter to perform the operation on
+ * @param requiredSizeInBytes The amount of bytes to shrink the partition by
+ */
 async function shrinkPartition(driveLetter: string, requiredSizeInBytes: number): Promise<void> {
     try {
         // Convert bytes to MB for PowerShell
@@ -359,6 +377,12 @@ async function shrinkPartition(driveLetter: string, requiredSizeInBytes: number)
     }
 }
 
+/**
+ * Create a new partition from the cleared size
+ * @param diskNumber The number of the disk in the system
+ * @param sizeInBytes The size that the new partition should be (in bytes)
+ * @param driveLetter The drive letter of the new partition to create
+ */
 async function createPartition(diskNumber: number, sizeInBytes: number, driveLetter: string): Promise<void> {
     try {
         // First, try to shrink the C: drive to make room for the new partition
@@ -397,6 +421,11 @@ async function createPartition(diskNumber: number, sizeInBytes: number, driveLet
     }
 }
 
+/**
+ * Format the selected partition to NTFS for Windows
+ * @param driveLetter The drive letter to perform this operation on
+ * @param volumeLabel The volume label (drive name) to perform this operation on
+ */
 async function formatPartition(driveLetter: string, volumeLabel: string): Promise<void> {
     try {
         const psCommand = `
@@ -421,6 +450,11 @@ async function formatPartition(driveLetter: string, volumeLabel: string): Promis
     }
 }
 
+/**
+ * A function used to move files from one place to another on the file system
+ * @param source Where the file originates from
+ * @param destination Where the file should be moved to
+ */
 async function moveFile(source: string, destination: string): Promise<void> {
     try {
         const psCommand = `
@@ -449,6 +483,11 @@ async function moveFile(source: string, destination: string): Promise<void> {
     }
 }
 
+/**
+ * Backup the users configuration to the temp directory
+ * @param backup_path The path where the current backup is stored (optional)
+ * @returns The final path where the file ends up
+ */
 async function backup_configs(backup_path?: string): Promise<string> {
     const bcLog = createTaskLogger('backup_configs');
     try {
@@ -523,12 +562,24 @@ async function backup_configs(backup_path?: string): Promise<string> {
     }
 }
 
+/**
+ * Replaces each environment variable in the string with its actual value (e.g. %APPDATA% -> C:\Users\Username\AppData\Roaming)
+ * @param str The string potentially containing environment variables
+ * @returns The string with environment variables expanded to their actual values
+ */
 function expandEnvVars(str: string): string {
     return str.replace(/%USERPROFILE%/g, process.env.USERPROFILE || '')
               .replace(/%APPDATA%/g, process.env.APPDATA || '')
               .replace(/%LOCALAPPDATA%/g, process.env.LOCALAPPDATA || '');
 }
 
+/**
+ * Recursively copies a directory from src to dest, avoiding symbolic links and limiting recursion depth
+ * @param src The source directory path
+ * @param dest The destination directory path
+ * @param depth The current recursion depth (used internally to limit recursion)
+ * @returns void
+ */
 function copyDirSync(src: string, dest: string, depth: number = 0): void {
     // Limit recursion depth to avoid issues with deep/symlinked directories
     if (depth > 10) return;
@@ -565,6 +616,13 @@ function copyDirSync(src: string, dest: string, depth: number = 0): void {
     }
 }
 
+
+/**
+ * Compresses a directory into a .tar.gz archive
+ * @param sourceDir The directory to compress
+ * @param outputFile The output file path for the compressed archive
+ * @returns The path to the compressed archive file
+ */
 async function compressDirectory(sourceDir: string, outputFile: string): Promise<string> {
     // Use tar package for compression
     const tar = await import('tar');

@@ -12,6 +12,11 @@ interface Package {
     version: string;
 }
 
+/**
+ * Parses the output of the `winget list` command to extract installed packages
+ * @param output The raw string output from `winget list`
+ * @returns An array of Package objects representing installed packages
+ */
 function parseWingetList(output: string): Package[] {
     const lines = output.trim().split('\n');
     const packages: Package[] = [];
@@ -67,6 +72,10 @@ function parseWingetList(output: string): Package[] {
     return packages;
 }
 
+/**
+ * Writes selected packages to requirements.winget.ts after prompting the user
+ * @returns void
+ */
 export async function smart_write() {
     logger.log('Fetching installed packages from winget...', 'blue');
     

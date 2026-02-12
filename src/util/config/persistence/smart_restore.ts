@@ -8,6 +8,10 @@ import { run as runProcess } from '../../run';
 
 const srLog = createTaskLogger('smart_restore');
 
+/**
+ * Restores the user's configurations from the most recent backup
+ * @returns void
+ */
 async function smart_restore(): Promise<void> {
     try {
         srLog.log('[✓] [winstro::smart_restore]: Checking for winstro backup partition...', 'green');
@@ -94,6 +98,10 @@ async function smart_restore(): Promise<void> {
     }
 }
 
+/**
+ * Finds the backup partition by looking for a volume with the label "winstro-backup"
+ * @returns The drive letter of the backup partition if found, otherwise null
+ */
 async function findBackupPartition(): Promise<string | null> {
     try {
         const psCommand = `
@@ -113,7 +121,6 @@ async function findBackupPartition(): Promise<string | null> {
         if (driveLine) {
             return driveLine.trim();
         }
-
         return null;
     } catch (err) {
         srLog.log(`[⚠] [winstro::smart_restore]: Error finding backup partition: ${err}`, 'yellow');
@@ -121,6 +128,10 @@ async function findBackupPartition(): Promise<string | null> {
     }
 }
 
+/**
+ * Prompts the user to enter the path to a backup file
+ * @returns The path entered by the user if valid, otherwise null
+ */
 async function promptForPath(): Promise<string | null> {
     return new Promise((resolve) => {
         const rl = readline.createInterface({
@@ -144,6 +155,11 @@ async function promptForPath(): Promise<string | null> {
     });
 }
 
+/**
+ * Restores the user's configurations from a specified backup file
+ * @param backupFilePath The path to the backup file to restore from
+ * @returns void
+ */
 async function restore_configs(backupFilePath: string): Promise<void> {
     try {
         if (!fs.existsSync(backupFilePath)) {
@@ -233,16 +249,24 @@ async function restore_configs(backupFilePath: string): Promise<void> {
         srLog.log(`[✗] [winstro::restore_configs]: Restore failed: ${err}`, 'red');
         throw err;
     }
-
-    
 }
 
+/**
+ * Expands environment variables in a given string
+ * @param str The string containing environment variables to expand
+ * @returns The string with environment variables expanded
+ */
 function expandEnvVars(str: string): string {
     return str.replace(/%USERPROFILE%/g, process.env.USERPROFILE || '')
               .replace(/%APPDATA%/g, process.env.APPDATA || '')
               .replace(/%LOCALAPPDATA%/g, process.env.LOCALAPPDATA || '');
 }
 
+/**
+ * Copies a directory and its contents recursively from source to destination
+ * @param src Source directory path
+ * @param dest Destination directory path
+ */
 function copyDirSync(src: string, dest: string): void {
     if (!fs.existsSync(dest)) {
         fs.mkdirSync(dest, { recursive: true });
@@ -262,6 +286,11 @@ function copyDirSync(src: string, dest: string): void {
     }
 }
 
+/**
+ * Decompresses a .tar.gz file to the specified output directory
+ * @param sourceFile The path to the .tar.gz file to decompress
+ * @param outputDir The directory to extract the contents to
+ */
 async function decompressFile(sourceFile: string, outputDir: string): Promise<void> {
     // Use system tar command for extraction (more reliable than tar package)
     const psCommand = `
@@ -279,6 +308,11 @@ async function decompressFile(sourceFile: string, outputDir: string): Promise<vo
     }
 }
 
+/**
+ * Removes the backup partition and expands the main drive to use the freed space
+ * @param driveLetter The drive letter of the backup partition to remove
+ * @returns void
+ */
 async function removeBackupPartitionAndExpand(driveLetter: string): Promise<void> {
     try {
         srLog.log('[✓] [winstro::cleanup]: Removing backup partition and expanding main drive...', 'green');
