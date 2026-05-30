@@ -60,7 +60,7 @@ if (-not ($env:Path -like "*$gitPath*")) {
 
 # Clone the repository
 Write-Host "[winstro*script]: Cloning the repository..."
-git clone https://github.com/rearrangement/winstro winstro
+git clone https://github.com/WickedSoftworks/winstro winstro
 Set-Location .\winstro
 Write-Host "[winstro*script]: Repository cloned successfully."
 Start-Sleep -Seconds 1.5
