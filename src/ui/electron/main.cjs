@@ -85,7 +85,7 @@ async function ensureRequirementsFile(defaultRequirementsPath) {
 
 async function startPackagedNextServer() {
 	const runtimeDir = path.join(process.resourcesPath, "app-runtime");
-	const serverEntry = path.join(runtimeDir, "server.js");
+	const serverEntry = path.join(runtimeDir, "src", "ui", "server.js");
 	const defaultsRequirements = path.join(
 		process.resourcesPath,
 		"defaults",
@@ -125,7 +125,7 @@ async function startPackagedNextServer() {
 	}
 
 	nextServerProcess = spawn(process.execPath, [serverEntry], {
-		cwd: runtimeDir,
+		cwd: path.join(runtimeDir, "src", "ui"),
 		env: {
 			...env,
 			ELECTRON_RUN_AS_NODE: "1",

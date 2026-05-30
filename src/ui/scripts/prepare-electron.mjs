@@ -66,15 +66,17 @@ async function prepare() {
 	await cp(standaloneDir, runtimeOutDir, { recursive: true, force: true });
 
 	if (await pathExists(staticDir)) {
-		await mkdir(path.join(runtimeOutDir, ".next"), { recursive: true });
-		await cp(staticDir, path.join(runtimeOutDir, ".next", "static"), {
+		const targetNextDir = path.join(runtimeOutDir, "src", "ui", ".next");
+		await mkdir(targetNextDir, { recursive: true });
+		await cp(staticDir, path.join(targetNextDir, "static"), {
 			recursive: true,
 			force: true,
 		});
 	}
 
 	if (await pathExists(publicDir)) {
-		await cp(publicDir, path.join(runtimeOutDir, "public"), {
+		const targetPublicDir = path.join(runtimeOutDir, "src", "ui", "public");
+		await cp(publicDir, targetPublicDir, {
 			recursive: true,
 			force: true,
 		});
