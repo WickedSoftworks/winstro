@@ -25,15 +25,20 @@ if (Get-Command bun -ErrorAction SilentlyContinue) {
     & .\install_bun.ps1
     Remove-Item .\install_bun.ps1
     Clear-Host
-}
 
-# Add Bun to PATH
-Write-Host "[winstro*script]: Adding Bun to PATH..."
-$env:Path += ";$env:USERPROFILE\.bun\bin"
-[System.Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User)
-Write-Host "[winstro*script]: Bun installed successfully."
-Start-Sleep -Seconds 1.5
-Clear-Host
+    # Add Bun to PATH
+    Write-Host "[winstro*script]: Adding Bun to PATH..."
+    $env:Path += ";$env:USERPROFILE\.bun\bin"
+    [System.Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User)
+    Write-Host "[winstro*script]: Bun installed successfully."
+    Start-Sleep -Seconds 1.5
+    Clear-Host
+
+    # Restart the script to ensure Bun & git are available in the current session
+    Write-Host "[winstro*script]: Restarting the script to apply changes..."
+    Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy Bypass", "-File `"$PSCommandPath`"" -Verb RunAs
+    exit
+}
 
 # Add Git to PATH (if not already added by the installer)
 $gitPath = "C:\Program Files\Git\cmd"
@@ -44,14 +49,14 @@ if (-not ($env:Path -like "*$gitPath*")) {
     Write-Host "[winstro*script]: Git added to PATH successfully."
     Start-Sleep -Seconds 1.5
     Clear-Host
+    
+    # Restart the script to ensure Bun & git are available in the current session
+    Write-Host "[winstro*script]: Restarting the script to apply changes..."
+    Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy Bypass", "-File `"$PSCommandPath`"" -Verb RunAs
+    exit
 } else {
     Write-Host "[winstro*script]: Git is already in PATH."
 }
-
-# Restart the script to ensure Bun & git are available in the current session
-Write-Host "[winstro*script]: Restarting the script to apply changes..."
-Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-ExecutionPolicy Bypass", "-File `"$PSCommandPath`"" -Verb RunAs
-exit
 
 # Clone the repository
 Write-Host "[winstro*script]: Cloning the repository..."

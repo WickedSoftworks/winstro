@@ -1,2 +1,9 @@
-const winget_requirements: string[] = ['voidtools.Everything', 'OBSProject.OBSStudio', 'Spotify.Spotify', 'Valve.Steam'];
+const winget_requirements: string[] = [
+	"Microsoft.WindowsTerminal",
+	"Microsoft.PowerShell",
+	"Microsoft.VisualStudioCode",
+	"Git.Git",
+	"Mozilla.Firefox",
+	"Google.Chrome",
+];
 export default winget_requirements;

@@ -1,24 +1,28 @@
 {
-  "name": "winstro",
-  "version": "1.0.0",
-  "module": "index.ts",
-  "type": "module",
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.6.3"
-  },
-  "scripts": {
-    "start": "bun run main"
-  },
-  "dependencies": {
-    "@types/prompt-sync": "^4.2.3",
-    "chalk": "^5.3.0",
-    "gradient-string": "^3.0.0",
-    "inquirer": "^12.5.2",
-    "is-admin": "^4.0.0",
-    "prompt-sync": "^4.2.0",
-    "tar": "^7.5.6"
-  }
+	"name": "winstro",
+	"version": "2.0.0",
+	"module": "index.ts",
+	"type": "module",
+	"devDependencies": {
+		"@biomejs/biome": "2.4.13",
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5.6.3"
+	},
+	"scripts": {
+		"start": "bun run main",
+		"check lint": "bunx --bun @biomejs/biome check --write",
+		"format": "bunx --bun @biomejs/biome format --write",
+		"lint": "bunx --bun @biomejs/biome lint --write"
+	},
+	"dependencies": {
+		"@types/prompt-sync": "^4.2.3",
+		"chalk": "^5.3.0",
+		"gradient-string": "^3.0.0",
+		"inquirer": "^12.5.2",
+		"is-admin": "^4.0.0",
+		"prompt-sync": "^4.2.0",
+		"tar": "^7.5.6"
+	}
 }
