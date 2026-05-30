@@ -21,7 +21,7 @@ First, you could either download the `winstro.ps1` script from the repo and run 
 
 If you want to clone it, follow these commands
 ```bash
-git clone https://github.com/rearrangement/winstro winstro
+git clone https://github.com/WickedSoftworks/winstro winstro
 cd winstro
 .\winstro.ps1\
 ```
