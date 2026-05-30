@@ -24,7 +24,11 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Install dependencies
+      - name: Install root dependencies
+        run: bun install
+        working-directory: .
+
+      - name: Install UI dependencies
         run: bun install
 
       - name: Build Electron App
